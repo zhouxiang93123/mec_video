@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>HTML5 GetUserMedia Demo</title>
+<meta name="viewport"
+	content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+	charset="utf-8" />
+<link href="css/buttons.css" rel="stylesheet">
+<script src="js/jquery-3.2.1.min.js"></script>
+<style>
+body {
+	text-align: center
+}
+/* css注释：为了观察效果设置宽度 边框 高度等样式 */
+</style>
+</head>
+<body>
+	<!-- <input type="button" title="开启摄像头" value="开启前置摄像头"
+		onclick="getMedia(0);" /> -->
+	<button class="button button-action" onclick="getMedia(1);">开启摄像头</button>
+	<br />
+	<video height="350px" autoplay="autoplay"></video>
+	<hr />
+	<button class="button button-caution button-circle button-jumbo" id="start"
+		onclick="getPhoto();">开始</button>
+	<br />
+	<canvas id="canvas1" height="350px" style="display: none;"></canvas>
+	<!-- <input type="button" title="视频" value="视频" onclick="getVedio();" />
+	<br />
+	<canvas id="canvas2" height="120px"></canvas> -->
+
+	<script type="text/javascript">
+		var flag = 0;
+		var video = document.querySelector('video');
+		var audio, audioType;
+		var canvas1 = document.getElementById('canvas1');
+		var context1 = canvas1.getContext('2d');
+
+		/* var canvas2 = document.getElementById('canvas2');
+		var context2 = canvas2.getContext('2d'); */
+
+		navigator.getUserMedia = navigator.getUserMedia
+				|| navigator.webkitGetUserMedia || navigator.mozGetUserMedia
+				|| navigator.msGetUserMedia;
+		window.URL = window.URL || window.webkitURL || window.mozURL
+				|| window.msURL;
+
+		var exArray = []; //存储设备源ID
+		MediaStreamTrack.getSources(function(sourceInfos) {
+			for (var i = 0; i != sourceInfos.length; ++i) {
+				var sourceInfo = sourceInfos[i];
+				//这里会遍历audio,video，所以要加以区分
+				if (sourceInfo.kind === 'video') {
+					exArray.push(sourceInfo.id);
+				}
+			}
+		});
+
+		function getMedia(a) {
+			if (navigator.getUserMedia) {
+				navigator.getUserMedia({
+					'video' : {
+						'optional' : [ {
+							'sourceId' : exArray[a]
+						//0为前置摄像头，1为后置
+						} ]
+					},
+					'audio' : true
+				}, successFunc, errorFunc); //success是获取成功的回调函数
+			} else {
+				alert('Native device media streaming (getUserMedia) not supported in this browser.');
+			}
+		}
+
+		function successFunc(stream) {
+			//alert('Succeed to get media!');
+			if (video.mozSrcObject !== undefined) {
+				//Firefox中，video.mozSrcObject最初为null，而不是未定义的，我们可以靠这个来检测Firefox的支持
+				video.mozSrcObject = stream;
+			} else {
+				video.src = window.URL && window.URL.createObjectURL(stream)
+						|| stream;
+			}
+
+			//video.play();
+
+			// 音频
+			audio = new Audio();
+			audioType = getAudioType(audio);
+			if (audioType) {
+				audio.src = 'polaroid.' + audioType;
+				audio.play();
+			}
+		}
+		function errorFunc(e) {
+			alert('Error！' + e);
+		}
+
+		// 将视频帧绘制到Canvas对象上,Canvas每60ms切换帧，形成肉眼视频效果
+		function drawVideoAtCanvas(video, context) {
+			window.setInterval(function() {
+				context.drawImage(video, 0, 0, 150, 200);
+			}, 60);
+		}
+
+		/* //获取音频格式
+		function getAudioType(element) {
+			if (element.canPlayType) {
+				if (element.canPlayType('audio/mp4; codecs="mp4a.40.5"') !== '') {
+					return ('aac');
+				} else if (element.canPlayType('audio/ogg; codecs="vorbis"') !== '') {
+					return ("ogg");
+				}
+			}
+			return false;
+		} */
+
+		// vedio播放时触发，绘制vedio帧图像到canvas
+		// video.addEventListener('play', function () {
+		// drawVideoAtCanvas(video, context2);
+		// }, false);
+		function post(URL, PARAMS) {
+			var temp = document.createElement("form");
+			temp.action = URL;
+			temp.method = "post";
+			temp.style.display = "none";
+			for ( var x in PARAMS) {
+				var opt = document.createElement("textarea");
+				opt.name = x;
+				opt.value = PARAMS[x];
+				// alert(opt.name)        
+				temp.appendChild(opt);
+			}
+			document.body.appendChild(temp);
+			temp.submit();
+			return temp;
+		}
+
+		//调用方法 如        
+		post('pages/statisticsJsp/excel.action', {
+			html : prnhtml,
+			cm1 : 'sdsddsd',
+			cm2 : 'haha'
+		});
+		var timer;
+		//拍照
+		function getPhoto() {
+			if (flag == 0) {
+				flag = 1;
+				alert("已开始!")
+				timer = window
+						.setInterval(
+								function() {
+
+									context1.drawImage(video, 0, 0, 300, 350); //将video对象内指定的区域捕捉绘制到画布上指定的区域，实现拍照。
+									var Pic = document
+											.getElementById("canvas1")
+											.toDataURL("image/png");
+
+									Pic = Pic.replace(
+											/^data:image\/(png|jpg);base64,/,
+											"");
+									/* post("https://api-cn.faceplusplus.com/imagepp/v1/recognizetext", {
+										api_key : 3PnoqgOLpuw5PNRtGsoYIekMCOjarVD2,
+										api_secret : OAUTmAXzCycEFbXARQMIMGwbCY3Uob7e,
+										image_base64 : Pic
+									}); */
+									$
+											.ajax({
+												type : 'POST',
+												url : "https://api-cn.faceplusplus.com/imagepp/v1/recognizetext",
+												data : {
+													api_key : "3PnoqgOLpuw5PNRtGsoYIekMCOjarVD2",
+													api_secret : "OAUTmAXzCycEFbXARQMIMGwbCY3Uob7e",
+													image_base64 : Pic
+												//image_url : "https://timgsa.baidu.com/timg?image%26quality=80%26size=b9999_10000%26sec=1502797971876%26di=fcce8146a1883db5686e5cccbd51689e%26imgtype=0%26src=http%3A%2F%2Fp3.gexing.com%2FG1%2FM00%2F65%2F23%2FrBACE1Jj0M7BmRIHAAFiL0VehWk396.jpg"
+												},
+												dataType : 'json',
+												success : function(msg) {
+													var str = "";
+													var len = msg.result.length;
+													var i;
+													for (i = 0; i < len; i++) {
+														str += msg.result[i].value;
+													}
+													if (str.indexOf("蜜蜂") > 0) {
+														alert("已识别");
+														window.location.href = "http://10.108.146.122:8080/video/index.html";
+													} else if (str
+															.indexOf("珊珊") > 0) {
+														alert("已识别");
+														window.location.href = "http://10.108.146.122:8080/video/index2.html";
+													}
+												}
+											});
+								}, 2000);
+			} else if (falg == 1) {
+				 window.clearInterval(timer);
+				 falg =0;
+				 alert("已暂停!")
+			}
+		}
+
+		/* //视频
+		function getVedio() {
+			drawVideoAtCanvas(video, context2);
+		} */
+	</script>
+</body>
+</html>
+
